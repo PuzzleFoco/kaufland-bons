@@ -15,8 +15,18 @@ WORK="$(mktemp -d)"
 MOCK_PID=""
 
 cleanup() {
+  # Exit-Status des Tests bewahren: der Trap darf kein Ergebnis umdrehen.
+  status=$?
   if [ -n "$MOCK_PID" ]; then kill "$MOCK_PID" 2>/dev/null || true; fi
-  rm -rf "$WORK"
+  rm -rf "$WORK" 2>/dev/null || true
+  if [ -d "$WORK" ]; then
+    # Die Container laufen als root und legen z.B. import/done/ mit root-Rechten
+    # an; der Runner-User darf darin nicht loeschen. Deshalb im Container putzen.
+    $ENGINE run --rm -v "$WORK":/w --entrypoint sh "$IMAGE" \
+      -c 'rm -rf /w/* /w/.[!.]* 2>/dev/null || true' >/dev/null 2>&1 || true
+    rm -rf "$WORK" 2>/dev/null || true
+  fi
+  exit "$status"
 }
 trap cleanup EXIT
 
