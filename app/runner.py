@@ -252,6 +252,14 @@ def run_export() -> tuple[bool, str]:
     return True, "ok"
 
 
+def paths_collide() -> bool:
+    """True when archive and consume folder are the same directory."""
+    try:
+        return RECEIPTS_DIR.resolve() == CONSUME_DIR.resolve()
+    except OSError:
+        return False
+
+
 def prune_formats() -> int:
     """Delete rendered files the user does not want (html/jpg), keep json+pdf."""
     wanted = set(EXPORT_FORMATS) | {"json", "pdf"} if PAPERLESS_MODE != "off" else set(EXPORT_FORMATS) | {"json"}
@@ -397,6 +405,17 @@ def write_status(ok: bool, exported: bool, pushed: int, errors: list[str]) -> No
 
 def run_once() -> int:
     log("Lauf gestartet")
+    if PAPERLESS_MODE != "off" and paths_collide():
+        # Paperless verschiebt eingelesene Dateien aus dem Consume-Ordner.
+        # Zeigen /receipts und /consume auf denselben Pfad, frisst es das Archiv.
+        message = ("/receipts und /consume zeigen auf dasselbe Verzeichnis "
+                   f"({RECEIPTS_DIR}). Paperless wuerde dein Archiv leeren - "
+                   "bitte getrennte Pfade mounten (Archiv z.B. /mnt/user/documents/"
+                   "kaufland-bons, Consume z.B. /mnt/user/paperless/consume).")
+        log(f"FEHLER: {message}")
+        write_status(False, False, 0, [message])
+        notify("Kaufland-Bons: Pfade kollidieren", message)
+        return 1
     exported, export_error = True, ""
     if DO_EXPORT:
         exported, export_error = run_export()

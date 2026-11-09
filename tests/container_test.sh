@@ -178,4 +178,16 @@ assert files == ["bon.json", "bon.pdf", "bon_summary.json"], f"unerwartet: {file
 print("Nur pdf+json behalten: ok")
 PY
 
+echo "== Schutz: /receipts und /consume identisch =="
+mkdir -p "$WORK/collide"
+set +e
+collide_out="$($ENGINE run --rm --entrypoint python -e PUID=0 -e PGID=0 \
+  -e PAPERLESS_MODE=consume -e CONSUME_DIR=/receipts -e KAUFLAND_EXPORT=false \
+  -v "$WORK/collide":/receipts "$IMAGE" /app/runner.py once 2>&1)"
+collide_status=$?
+set -e
+[ "$collide_status" -eq 1 ] || fail "Schutz griff nicht (Exit $collide_status)"
+printf '%s' "$collide_out" | grep -q "dasselbe Verzeichnis" || fail "Meldung fehlt: $collide_out"
+echo "Kollisionsschutz: ok"
+
 echo "ALLE TESTS GRUEN"
