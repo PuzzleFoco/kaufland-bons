@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # Release + Template-Asset
   packages: write
 
 jobs:
@@ -67,8 +67,16 @@ jobs:
           name: unraid-template
           path: dist/kaufland-bons.xml
 
-      - name: Template an Release haengen
+      - name: Release mit Template-Asset
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${GITHUB_REF_NAME}" dist/kaufland-bons.xml --clobber
+          IMAGE: ${{ steps.name.outputs.image }}
+        run: |
+          notes="Image: ${IMAGE}:${GITHUB_REF_NAME} (auch latest)
+
+          Unraid: kaufland-bons.xml herunterladen und unter Docker -> Template hinzufuegen einlesen."
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
+            || gh release create "${GITHUB_REF_NAME}" \
+                 --title "kaufland-bons ${GITHUB_REF_NAME}" --notes "$notes"
+          gh release upload "${GITHUB_REF_NAME}" dist/kaufland-bons.xml --clobber
