@@ -1,7 +1,7 @@
 services:
   kaufland-bons:
-    build: .
-    image: kaufland-bons:latest
+    image: ghcr.io/puzzlefoco/kaufland-bons:latest
+    build: .            # Fallback: `docker compose build` baut lokal
     container_name: kaufland-bons
     restart: unless-stopped
     environment:
@@ -33,7 +33,7 @@ services:
   #   docker compose --profile login up login
   #   http://<nas>:6080/vnc.html  -> Login/2FA eintippen -> Container beendet sich
   login:
-    image: kaufland-bons:latest
+    image: ghcr.io/puzzlefoco/kaufland-bons:latest
     container_name: kaufland-bons-login
     profiles: ["login"]
     restart: "no"
