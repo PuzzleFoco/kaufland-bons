@@ -117,6 +117,7 @@ Wichtige Variablen:
 | `PAPERLESS_URL` | – | nur `api`: z. B. `http://192.168.1.10:8000` |
 | `PAPERLESS_TOKEN` | – | nur `api`: API-Token aus Paperless |
 | `CONSUME_DIR` | `/consume` | nur `consume`: Zielordner (Paperless-Consume) |
+| `EXPORT_FORMATS` | `pdf,json` | welche Dateien im Archiv bleiben: `pdf`, `jpg`, `html`, `json` |
 | `PAPERLESS_CORRESPONDENT` | `Kaufland` | wird bei Bedarf angelegt |
 | `PAPERLESS_DOCUMENT_TYPE` | `Kassenbon` | leer = kein Dokumenttyp |
 | `PAPERLESS_TAGS` | `kaufland,bon` | kommasepariert |
@@ -166,6 +167,30 @@ Was du dabei verlierst: Titel, Datum, Tags und Korrespondent kommen nicht mehr
 aus dem Container. Paperless nutzt den Dateinamen als Titel (daher die lesbaren
 Namen) und muss Korrespondent `Kaufland`, Tags und Dokumenttyp über eigene
 Regeln zuordnen; das Datum zieht es meist aus dem PDF-Text.
+
+## Formate
+
+Standard ist `pdf,json`. Was du behältst, hängt am Ziel:
+
+| Format | Nutzen | Für Paperless |
+|---|---|---|
+| `pdf` | A4-Rendering mit Textebene, wird immer behalten sobald Paperless aktiv ist | **ja** |
+| `json` | Rohdaten (Positionen, Preise), Basis für `convert` und Auswertungen | nein, aber winzig |
+| `jpg` | Vorschau/Weitergeben per Handy | nein — Paperless würde es als **zweites** Dokument OCRn |
+| `html` | nur zum Anschauen im Browser | nein — Paperless lehnt unbekannte Endungen im Consume-Ordner ab |
+
+Paperless-ngx kann laut FAQ PDF, PNG/JPEG/TIFF/GIF/WebP (OCR), Plaintext und
+— nur mit Tika — Office-Formate. **HTML gehört nicht dazu.** Deshalb ist
+`pdf,json` die sinnvolle Vorgabe; `jpg` und `html` erzeugen nur Ballast.
+
+Der Upstream rendert immer alle vier Formate; `EXPORT_FORMATS` entfernt die
+unerwünschten nach jedem Lauf (Kommando `prune`). Das spart Plattenplatz, nicht
+Renderzeit — die Chromium-Läufe finden trotzdem statt. Für ein bestehendes
+Archiv einmalig:
+
+```sh
+docker exec kaufland-bons python /app/runner.py prune
+```
 
 ## Betrieb
 

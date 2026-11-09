@@ -43,6 +43,13 @@ PAPERLESS_MODE = os.getenv(
     "api" if (os.getenv("PAPERLESS_URL") and os.getenv("PAPERLESS_TOKEN")) else "off",
 ).strip().lower()
 CONSUME_DIR = Path(os.getenv("CONSUME_DIR", "/consume"))
+# Welche Dateien im Archiv bleiben. JSON immer (Titel/Preise, convert braucht es).
+# pdf ist Pflicht, sobald etwas an Paperless gehen soll.
+EXPORT_FORMATS = {
+    f.strip().lower().lstrip(".")
+    for f in os.getenv("EXPORT_FORMATS", "pdf,json").split(",")
+    if f.strip()
+}
 CORRESPONDENT = os.getenv("PAPERLESS_CORRESPONDENT", "Kaufland")
 DOCUMENT_TYPE = os.getenv("PAPERLESS_DOCUMENT_TYPE", "Kassenbon")
 TAGS = [t.strip() for t in os.getenv("PAPERLESS_TAGS", "kaufland,bon").split(",") if t.strip()]
@@ -245,6 +252,24 @@ def run_export() -> tuple[bool, str]:
     return True, "ok"
 
 
+def prune_formats() -> int:
+    """Delete rendered files the user does not want (html/jpg), keep json+pdf."""
+    wanted = set(EXPORT_FORMATS) | {"json", "pdf"} if PAPERLESS_MODE != "off" else set(EXPORT_FORMATS) | {"json"}
+    removed = 0
+    for path in RECEIPTS_DIR.rglob("*"):
+        if not path.is_file():
+            continue
+        suffix = path.suffix.lstrip(".").lower()
+        if suffix in {"tmp", "part"} or suffix in wanted:
+            continue
+        try:
+            path.unlink()
+            removed += 1
+        except OSError as exc:
+            log(f"Konnte {path.name} nicht entfernen: {exc}")
+    return removed
+
+
 def candidate_pdfs() -> list[tuple[Path, str]]:
     found: list[tuple[Path, str]] = []
     if RECEIPTS_DIR.exists():
@@ -377,6 +402,10 @@ def run_once() -> int:
         exported, export_error = run_export()
         if not exported:
             log(f"Export fehlgeschlagen: {export_error}")
+    if exported and DO_EXPORT:
+        removed = prune_formats()
+        if removed:
+            log(f"{removed} Datei(en) entfernt (EXPORT_FORMATS={','.join(sorted(EXPORT_FORMATS))})")
     pushed, errors = (0, [])
     mode = PAPERLESS_MODE if DO_PUSH else "off"
     if mode == "consume":
@@ -465,6 +494,9 @@ def main() -> int:
         return run_once()
     if command == "daemon":
         return daemon()
+    if command == "prune":
+        print(f"{prune_formats()} Datei(en) entfernt")
+        return 0
     if command == "push":
         pushed, errors = push(load_ledger())
         for error in errors:
@@ -473,7 +505,7 @@ def main() -> int:
         return 1 if errors else 0
     if command == "health":
         return health()
-    print(f"unbekanntes Kommando: {command} (once|daemon|push|health)")
+    print(f"unbekanntes Kommando: {command} (once|daemon|push|prune|health)")
     return 2
 
 

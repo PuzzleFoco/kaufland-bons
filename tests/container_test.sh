@@ -164,4 +164,18 @@ assert len(ledger) == 2, f"Ledger: {len(ledger)}"
 print("Consume-Ordner, Dateinamen, Ledger: ok")
 PY
 
+echo "== Format-Auswahl (prune) =="
+mkdir -p "$WORK/prune/2026-11/2026-11-03"
+for ext in pdf json jpg html; do printf 'x' > "$WORK/prune/2026-11/2026-11-03/bon.$ext"; done
+printf '{}' > "$WORK/prune/2026-11/2026-11-03/bon_summary.json"
+$ENGINE run --rm --entrypoint python -e PUID=0 -e PGID=0 \
+  -e PAPERLESS_MODE=off -e EXPORT_FORMATS=pdf,json \
+  -v "$WORK/prune":/receipts "$IMAGE" /app/runner.py prune | tee "$WORK/prune.log"
+python3 - "$WORK" <<'PY' || exit 1
+import pathlib, sys
+files = sorted(p.name for p in (pathlib.Path(sys.argv[1]) / "prune/2026-11/2026-11-03").iterdir())
+assert files == ["bon.json", "bon.pdf", "bon_summary.json"], f"unerwartet: {files}"
+print("Nur pdf+json behalten: ok")
+PY
+
 echo "ALLE TESTS GRUEN"

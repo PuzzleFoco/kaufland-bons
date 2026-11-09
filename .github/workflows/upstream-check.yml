@@ -39,8 +39,24 @@ jobs:
           echo "head=$head" >> "$GITHUB_OUTPUT"
           echo "short=${head:0:12}" >> "$GITHUB_OUTPUT"
 
-      - name: Dockerfile auf neuen Commit setzen
+      - id: scope
+        name: Aendert sich ueberhaupt Code?
         if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PINNED: ${{ steps.pinned.outputs.ref }}
+          HEAD: ${{ steps.upstream.outputs.head }}
+        run: |
+          files="$(gh api "repos/BlackDark/kaufland-api/compare/${PINNED}...${HEAD}" --jq '.files[].filename')"
+          if printf '%s\n' "$files" | grep -qE '^(kaufland_api/|pyproject.toml)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Upstream nur Infrastruktur-Aenderungen ($(printf '%s' "$files" | tr '\n' ' ')) - Pin bleibt."
+          fi
+
+      - name: Dockerfile auf neuen Commit setzen
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head && steps.scope.outputs.code == 'true'
         env:
           HEAD: ${{ steps.upstream.outputs.head }}
         run: |
@@ -50,15 +66,15 @@ jobs:
       # PRs, die mit dem GITHUB_TOKEN erstellt werden, triggern keine weiteren
       # Workflows. Deshalb wird der Bump hier direkt gebaut und getestet.
       - name: Testimage bauen
-        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head && steps.scope.outputs.code == 'true'
         run: docker build -t kaufland-bons:ci .
 
       - name: Container-Test
-        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head && steps.scope.outputs.code == 'true'
         run: ./tests/container_test.sh kaufland-bons:ci
 
       - name: PR anlegen oder aktualisieren
-        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head && steps.scope.outputs.code == 'true'
         uses: peter-evans/create-pull-request@v7
         with:
           branch: chore/upstream-kaufland-api
