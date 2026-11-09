@@ -1,0 +1,74 @@
+name: build
+
+on:
+  push:
+    # develop bauen, damit PRs dort ein ziehbares Testimage haben;
+    # `latest` bekommt nur der Default-Branch (siehe metadata-action unten).
+    branches: [main, develop]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: name
+        name: Image-Name (GHCR verlangt Kleinbuchstaben)
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.name.outputs.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha,format=short
+            type=raw,value={{date 'YYYYMMDD'}}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Unraid ist x86_64. Fuer arm64 (Pi o.ae.) hier ergaenzen:
+          # platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Unraid-Template rendern
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}
+        run: |
+          mkdir -p dist
+          sed "s|__IMAGE__|${IMAGE}:latest|g" unraid/kaufland-bons.xml > dist/kaufland-bons.xml
+          grep -q "<Repository>${IMAGE}:latest</Repository>" dist/kaufland-bons.xml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unraid-template
+          path: dist/kaufland-bons.xml
+
+      - name: Template an Release haengen
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/kaufland-bons.xml --clobber

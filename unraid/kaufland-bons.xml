@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>kaufland-bons</Name>
+  <Repository>__IMAGE__</Repository>
+  <Registry/>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/BlackDark/kaufland-api</Project>
+  <Overview>Exportiert digitale Kaufland-Card-Kassenbons (PDF) und schiebt sie mit Metadaten in Paperless-ngx. Laeuft taeglich, holt beim ersten Lauf die komplette Historie, merkt sich bereits uebertragene Belege.</Overview>
+  <Category>Productivity:</Category>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/BlackDark/kaufland-api/main/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Description>Kaufland Card -> Paperless-ngx. Benoetigt eine einmalige Anmeldung (auth.json im config-Ordner).</Description>
+
+  <Config Name="config" Target="/config" Default="/mnt/user/appdata/kaufland-bons" Mode="rw"
+          Description="auth.json (Kaufland-Login), pushed.json, status.json"
+          Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/kaufland-bons</Config>
+  <Config Name="receipts" Target="/receipts" Default="/mnt/user/documents/kaufland-bons" Mode="rw"
+          Description="Archiv der exportierten Belege (JSON, HTML, JPG, PDF)"
+          Type="Path" Display="always" Required="true" Mask="false">/mnt/user/documents/kaufland-bons</Config>
+  <Config Name="import" Target="/import" Default="/mnt/user/documents/kaufland-bons-import" Mode="rw"
+          Description="Optional: alte PDFs hier ablegen, werden nach Paperless geschoben und nach ./done verschoben"
+          Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/documents/kaufland-bons-import</Config>
+
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="always" Required="false" Mask="false">Europe/Berlin</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User-ID fuer Dateien auf dem Array" Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group-ID fuer Dateien auf dem Array" Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="RUN_AT" Target="RUN_AT" Default="04:30" Mode="" Description="Taegliche Laufzeit (HH:MM)" Type="Variable" Display="always" Required="false" Mask="false">04:30</Config>
+  <Config Name="RUN_ON_START" Target="RUN_ON_START" Default="true" Mode="" Description="Beim Containerstart sofort einen Lauf machen" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="KAUFLAND_EXPORT" Target="KAUFLAND_EXPORT" Default="true" Mode="" Description="false = nur vorhandene Dateien nach Paperless schieben" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="KAUFLAND_EXPORT_ARGS" Target="KAUFLAND_EXPORT_ARGS" Default="" Mode="" Description="Optionale Argumente, z.B. --period this-year oder --since 2024-07-01" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="PAPERLESS_URL" Target="PAPERLESS_URL" Default="" Mode="" Description="z.B. http://192.168.1.10:8000" Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  <Config Name="PAPERLESS_TOKEN" Target="PAPERLESS_TOKEN" Default="" Mode="" Description="Paperless API-Token (Einstellungen -> API-Token)" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="PAPERLESS_CORRESPONDENT" Target="PAPERLESS_CORRESPONDENT" Default="Kaufland" Mode="" Description="Korrespondent (wird bei Bedarf angelegt)" Type="Variable" Display="advanced" Required="false" Mask="false">Kaufland</Config>
+  <Config Name="PAPERLESS_DOCUMENT_TYPE" Target="PAPERLESS_DOCUMENT_TYPE" Default="Kassenbon" Mode="" Description="Dokumenttyp (wird bei Bedarf angelegt; leer = keiner)" Type="Variable" Display="advanced" Required="false" Mask="false">Kassenbon</Config>
+  <Config Name="PAPERLESS_TAGS" Target="PAPERLESS_TAGS" Default="kaufland,bon" Mode="" Description="Komma-getrennte Tags" Type="Variable" Display="advanced" Required="false" Mask="false">kaufland,bon</Config>
+  <Config Name="PAPERLESS_PUSH" Target="PAPERLESS_PUSH" Default="true" Mode="" Description="Upload nach Paperless-ngx" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="NOTIFY_URL" Target="NOTIFY_URL" Default="" Mode="" Description="Optional: HA-Webhook/ntfy-URL fuer Fehlermeldungen (z.B. abgelaufener Login)" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+</Container>

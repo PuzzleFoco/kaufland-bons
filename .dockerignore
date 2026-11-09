@@ -1,0 +1,10 @@
+tests/
+unraid/
+appdata/
+receipts/
+dist/
+.git/
+.github/
+*.tar.gz
+README.md
+LICENSE

@@ -1,0 +1,4 @@
+# Gepinnt, damit Dependabot (pip) woechentlich aktualisieren kann.
+# Browser-Build passt zur playwright-Version; nach einem Bump baut die CI neu.
+playwright==1.64.1
+requests==2.34.2

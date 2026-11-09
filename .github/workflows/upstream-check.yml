@@ -1,0 +1,69 @@
+name: upstream-check
+
+# Der Client ist auf einen Commit gepinnt (ARG KAUFLAND_REF). Dependabot kann
+# Dockerfile-ARGs nicht verfolgen, deshalb dieser woechentliche Check: er oeffnet
+# einen PR mit dem neuen Commit. Die CI (test.yml) prueft den PR automatisch.
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: pinned
+        name: Gepinnten Upstream-Commit lesen
+        run: |
+          ref="$(sed -n 's/^ARG KAUFLAND_REF=\([0-9a-f]\{40\}\)$/\1/p' Dockerfile)"
+          if [ -z "$ref" ]; then
+            echo "::error::Kein ARG KAUFLAND_REF=<40 hex> in der Dockerfile gefunden"
+            exit 1
+          fi
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - id: upstream
+        name: Upstream-HEAD abfragen
+        run: |
+          head="$(git ls-remote https://github.com/BlackDark/kaufland-api HEAD | cut -f1)"
+          if [ -z "$head" ]; then
+            echo "::error::Upstream nicht erreichbar"
+            exit 1
+          fi
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          echo "short=${head:0:12}" >> "$GITHUB_OUTPUT"
+
+      - name: Dockerfile auf neuen Commit setzen
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        env:
+          HEAD: ${{ steps.upstream.outputs.head }}
+        run: |
+          sed -i "s/^ARG KAUFLAND_REF=.*$/ARG KAUFLAND_REF=${HEAD}/" Dockerfile
+          grep -q "^ARG KAUFLAND_REF=${HEAD}$" Dockerfile
+
+      - name: PR anlegen oder aktualisieren
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/upstream-kaufland-api
+          delete-branch: true
+          labels: dependencies, upstream
+          title: "Upstream: kaufland-api auf ${{ steps.upstream.outputs.short }}"
+          commit-message: "chore(deps): kaufland-api auf ${{ steps.upstream.outputs.head }}"
+          body: |
+            Der gepinnte Client-Commit ist
+            `${{ steps.pinned.outputs.ref }}`, Upstream steht auf
+            `${{ steps.upstream.outputs.head }}`.
+
+            Vergleich:
+            https://github.com/BlackDark/kaufland-api/compare/${{ steps.pinned.outputs.ref }}...${{ steps.upstream.outputs.head }}
+
+            Die CI baut und testet das Image automatisch. Vor dem Merge bitte
+            einmal `docker logs` eines echten Laufs pruefen: die Kaufland-App-API
+            ist inoffiziell und Aenderungen fallen oft erst im Betrieb auf.

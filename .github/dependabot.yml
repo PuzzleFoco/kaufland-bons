@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  # Python-Abhaengigkeiten im Image (playwright, requests) -> requirements.txt
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      python:
+        patterns: ["*"]
+    # Wenn das Repo einen develop-Branch nutzt, hier aktivieren:
+    # target-branch: "develop"
+
+  # GitHub Actions in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "Europe/Berlin"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        patterns: ["*"]
+    # target-branch: "develop"
+
+  # Basis-Image python:3.14-slim
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "Europe/Berlin"
+    commit-message:
+      prefix: "chore(base)"
+    # target-branch: "develop"
+
+# Der gepinnte Upstream-Commit (ARG KAUFLAND_REF in der Dockerfile) ist fuer
+# Dependabot nicht erreichbar: Dockerfile-ARGs und git-URLs in pip werden nicht
+# verfolgt. Dafuer gibt es .github/workflows/upstream-check.yml (wöchentlich,
+# oeffnet einen PR mit dem neuen Commit).

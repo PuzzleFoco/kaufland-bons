@@ -1,0 +1,30 @@
+services:
+  kaufland-bons:
+    build: .
+    image: kaufland-bons:latest
+    container_name: kaufland-bons
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Berlin
+      PUID: "99"
+      PGID: "100"
+      RUN_AT: "04:30"
+      RUN_ON_START: "true"
+      KAUFLAND_EXPORT: "true"
+      KAUFLAND_EXPORT_ARGS: ""          # leer = Voll-Export beim ersten Lauf, danach inkrementell
+      PAPERLESS_URL: "http://192.168.1.10:8000"
+      PAPERLESS_TOKEN: "${PAPERLESS_TOKEN}"
+      PAPERLESS_CORRESPONDENT: "Kaufland"
+      PAPERLESS_DOCUMENT_TYPE: "Kassenbon"
+      PAPERLESS_TAGS: "kaufland,bon"
+      PAPERLESS_PUSH: "true"
+      NOTIFY_URL: ""                     # optional: HA-Webhook oder ntfy
+    volumes:
+      - ./appdata:/config               # auth.json, pushed.json, status.json
+      - /mnt/user/documents/kaufland:/receipts
+      - /mnt/user/documents/kaufland-import:/import
+    healthcheck:
+      test: ["CMD", "python", "/app/runner.py", "health"]
+      interval: 6h
+      timeout: 10s
+      retries: 2
