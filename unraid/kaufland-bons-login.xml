@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>kaufland-bons-login</Name>
+  <Repository>__IMAGE__</Repository>
+  <Registry/>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/BlackDark/kaufland-api</Project>
+  <Overview>Einmal-Container fuer den Kaufland-Login im Browser (noVNC auf Port 6080). Nach erfolgreichem Login wird auth.json in /config geschrieben, der Container beendet sich. Danach diesen Container wieder entfernen.</Overview>
+  <Category>Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:6080]/vnc.html?autoconnect=1&amp;resize=scale</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/BlackDark/kaufland-api/main/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs>login-web</PostArgs>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Description>Nur fuer den Login starten, nicht dauerhaft laufen lassen. Idealerweise nur im LAN erreichbar; noVNC laeuft unverschluesselt (ws), also kein Port-Forwarding ins Internet.</Description>
+
+  <Config Name="config" Target="/config" Default="/mnt/user/appdata/kaufland-bons" Mode="rw"
+          Description="Gleicher Ordner wie beim Dauer-Container (auth.json)"
+          Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/kaufland-bons</Config>
+  <Config Name="noVNC-Port" Target="6080" Default="6080" Mode="tcp"
+          Description="Weboberflaeche fuer das Login-Fenster"
+          Type="Port" Display="always" Required="true" Mask="false">6080</Config>
+  <Config Name="VNC_PASSWORD" Target="VNC_PASSWORD" Default="" Mode=""
+          Description="Passwort fuer das Login-Fenster; leer = Zufallspasswort in /config/vnc-password.txt"
+          Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="KAUFLAND_COUNTRY" Target="KAUFLAND_COUNTRY" Default="DE" Mode=""
+          Description="Laendercode des Kontos" Type="Variable" Display="advanced" Required="false" Mask="false">DE</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone"
+          Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User-ID fuer auth.json"
+          Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group-ID fuer auth.json"
+          Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+</Container>

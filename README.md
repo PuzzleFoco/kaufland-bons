@@ -45,11 +45,33 @@ Personal Access Token (`read:packages`) ausführen.
 
 ## 1. Einmalig anmelden (auth.json)
 
-Der Login braucht einen **sichtbaren Browser** (E-Mail, Passwort, ggf. 2FA).
-Danach wird nur ein Refresh-Token gespeichert (`/config/auth.json`, Modus 0600).
-Das Passwort liegt nie im Container.
+Der Login braucht einen **Browser** (E-Mail, Passwort, ggf. 2FA) — dafür gibt es
+drei Wege. Gespeichert wird immer nur ein Refresh-Token (`/config/auth.json`,
+Modus 0600); das Passwort liegt nie im Container.
 
-**Variante A — auf einem Rechner mit Browser (empfohlen):**
+**Variante A — Login-Fenster im Container (kein zweiter Rechner nötig):**
+
+Das Image bringt Xvfb, x11vnc und noVNC mit. Ein separater Einmal-Container
+öffnet den Login als Webseite; der Dauerbetrieb hat keinen VNC-Port.
+
+Unraid: Template `kaufland-bons-login.xml` importieren, starten, das WebUI-Symbol
+öffnet `http://<nas>:6080/vnc.html?autoconnect=1&resize=scale`. Passwort ist
+`VNC_PASSWORD` oder steht in `/mnt/user/appdata/kaufland-bons/vnc-password.txt`
+(Modus 0600, absichtlich nicht im Log). Nach Login + 2FA schreibt der Container
+`auth.json` und beendet sich — Template/Container danach wieder entfernen.
+
+Docker/Compose:
+
+```sh
+VNC_PASSWORD='<frei waehlen>' docker compose --profile login up login
+```
+
+Sicherheit: noVNC läuft **unverschlüsselt** (ws) — nur im LAN, kein
+Port-Forwarding ins Internet, Container nach dem Login löschen. Der
+Login-Container und der Dauer-Container teilen `/config`; der Dauer-Container
+liest `auth.json` beim nächsten Lauf.
+
+**Variante B — auf einem Rechner mit Browser:**
 
 ```sh
 git clone https://github.com/BlackDark/kaufland-api /tmp/kaufland-api
@@ -63,7 +85,7 @@ uv run kaufland login --country DE --language de --auth-file ./auth.json
 
 `auth.json` nach `/mnt/user/appdata/kaufland-bons/auth.json` kopieren.
 
-**Variante B — aus dem Image mit X11 (Linux-Desktop):**
+**Variante C — aus dem Image mit X11 (Linux-Desktop, ohne noVNC):**
 
 ```sh
 xhost +local:
@@ -93,6 +115,8 @@ Wichtige Variablen:
 | `KAUFLAND_EXPORT_ARGS` | – | z. B. `--period this-year` oder `--since 2024-07-01` |
 | `NOTIFY_URL` | – | Webhook bei Fehlern (HA-Webhook oder ntfy) |
 | `PUID` / `PGID` | `99` / `100` | Dateirechte auf dem Array |
+| `VNC_PASSWORD` | – | nur Login-Container (`login-web`), leer = Zufallspasswort in `/config/vnc-password.txt` |
+| `LOGIN_PORT` | `6080` | nur Login-Container: Port der Weboberfläche |
 
 ## Verzeichnisse
 
@@ -132,8 +156,9 @@ Drei getrennte Dinge, die man nicht verwechseln sollte:
    laufen durch die CI.
 2. **Upstream-Client** (der gepinnte Commit): Dependabot kann Dockerfile-ARGs
    nicht verfolgen. `upstream-check.yml` prüft montags den Upstream-HEAD und
-   öffnet einen PR mit dem neuen `KAUFLAND_REF`. Merge erst nach einem echten
-   Lauf — die App-API ist inoffiziell.
+   öffnet einen PR mit dem neuen `KAUFLAND_REF` — baut und testet das Image
+   vorher im selben Job (PRs mit dem Standard-Token lösen keine weiteren
+   Workflows aus). Merge erst nach einem echten Lauf: die App-API ist inoffiziell.
 3. **Dein Container:** Image neu ziehen und starten.
 
 ```sh
@@ -153,8 +178,8 @@ git clone <dieses-repo> && cd kaufland-bon-exporter
 docker build -t kaufland-bons:latest .
 ```
 
-Das Image ist ~1,5 GB (Chromium für PDF/JPG-Rendering). Bauzeit auf einem
-Unraid-Server: einige Minuten.
+Das Image ist ~1,8 GB (Chromium für PDF/JPG-Rendering, plus Xvfb/noVNC für den
+Login im Browser). Bauzeit auf einem Unraid-Server: einige Minuten.
 
 ## Grenzen (ehrlich)
 
@@ -185,8 +210,16 @@ docker build -t kaufland-bons:ci .
 ./tests/container_test.sh kaufland-bons:ci
 ```
 
-Nicht automatisiert testbar (braucht echte Zugangsdaten): der Kaufland-Login und
-ein echter Transaktionsabruf.
+Zusätzlich manuell verifiziert (nicht in der CI, weil Port/Bildschirm nötig):
+
+- `login-web` liefert `http://…:6080/vnc.html` mit HTTP 200; Xvfb, openbox,
+  x11vnc, websockify und der Client laufen, Chromium startet **sichtbar** auf
+  `:99`, das echte Kaufland-Formular rendert (Titel „Kaufland - Einloggen").
+- Ohne `VNC_PASSWORD` entsteht `/config/vnc-password.txt` mit Modus 0600 —
+  das Passwort erscheint nicht im Log.
+
+Nicht automatisiert testbar (braucht echte Zugangsdaten): der eigentliche Login
+und ein echter Transaktionsabruf.
 
 ## Lizenz
 

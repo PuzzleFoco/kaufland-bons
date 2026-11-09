@@ -15,6 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates git tini gosu tzdata \
+      xvfb x11vnc novnc websockify openbox procps \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /tmp/requirements.txt
@@ -35,7 +36,10 @@ RUN git clone --quiet https://github.com/BlackDark/kaufland-api /opt/kaufland-sr
 WORKDIR /app
 COPY app/ /app/
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh /app/login_web.sh
+
+# 6080 nur im Einmal-Modus `login-web` (noVNC), im Dauerbetrieb unbenutzt
+EXPOSE 6080
 
 VOLUME ["/config", "/receipts", "/import"]
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]

@@ -47,6 +47,16 @@ jobs:
           sed -i "s/^ARG KAUFLAND_REF=.*$/ARG KAUFLAND_REF=${HEAD}/" Dockerfile
           grep -q "^ARG KAUFLAND_REF=${HEAD}$" Dockerfile
 
+      # PRs, die mit dem GITHUB_TOKEN erstellt werden, triggern keine weiteren
+      # Workflows. Deshalb wird der Bump hier direkt gebaut und getestet.
+      - name: Testimage bauen
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        run: docker build -t kaufland-bons:ci .
+
+      - name: Container-Test
+        if: steps.pinned.outputs.ref != steps.upstream.outputs.head
+        run: ./tests/container_test.sh kaufland-bons:ci
+
       - name: PR anlegen oder aktualisieren
         if: steps.pinned.outputs.ref != steps.upstream.outputs.head
         uses: peter-evans/create-pull-request@v7

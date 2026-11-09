@@ -28,3 +28,22 @@ services:
       interval: 6h
       timeout: 10s
       retries: 2
+
+  # Einmal-Login im Browser (noVNC). Nicht dauerhaft laufen lassen:
+  #   docker compose --profile login up login
+  #   http://<nas>:6080/vnc.html  -> Login/2FA eintippen -> Container beendet sich
+  login:
+    image: kaufland-bons:latest
+    container_name: kaufland-bons-login
+    profiles: ["login"]
+    restart: "no"
+    ports:
+      - "6080:6080"
+    environment:
+      TZ: Europe/Berlin
+      PUID: "99"
+      PGID: "100"
+      VNC_PASSWORD: "${VNC_PASSWORD:-}"   # leer = Zufallspasswort in ./appdata/vnc-password.txt
+    volumes:
+      - ./appdata:/config
+    command: ["login-web"]

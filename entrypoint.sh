@@ -22,6 +22,11 @@ for dir in /config /receipts /import; do
   fi
 done
 
+if [ "${1:-}" = "login-web" ]; then
+  shift
+  exec gosu "${PUID}:${PGID}" /app/login_web.sh "$@"
+fi
+
 if [ "${1:-}" = "login" ]; then
   shift
   exec gosu "${PUID}:${PGID}" kaufland --auth-file "${KAUFLAND_AUTH_FILE:-/config/auth.json}" \
