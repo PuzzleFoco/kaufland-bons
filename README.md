@@ -27,9 +27,13 @@ Tags: `latest` (Default-Branch), `v1.2.3` (Release), `sha-<kurz>` und
 `YYYYMMDD` (jeder Build, gut für Rollback: alten Tag setzen, Container neu
 starten, Ledger bleibt unberührt).
 
-Unraid: Das fertig gerenderte Template hängt als Asset am Release bzw. als
-Artifact am Build (`kaufland-bons.xml`). Über *Docker → Template hinzufügen*
-einlesen, `PAPERLESS_URL` und `PAPERLESS_TOKEN` eintragen, fertig.
+Unraid: Am Release hängen **zwei** fertig gerenderte Templates —
+`kaufland-bons-login.xml` (einmalig für den Login) und `kaufland-bons.xml`
+(Dauerbetrieb). Beide über *Docker → Template hinzufügen* einlesen.
+
+Reihenfolge: erst **login** starten, im WebUI-Fenster anmelden, Container
+beendet sich → Login-Template wieder entfernen. Dann **kaufland-bons** starten
+und dort `PAPERLESS_URL` und `PAPERLESS_TOKEN` eintragen.
 
 Ohne Template, per Compose: `docker-compose.yml` zieht bereits
 `ghcr.io/puzzlefoco/kaufland-bons:latest` — nur `PAPERLESS_URL` und

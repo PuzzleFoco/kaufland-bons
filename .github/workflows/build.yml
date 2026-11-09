@@ -54,18 +54,22 @@ jobs:
           provenance: true
           sbom: true
 
-      - name: Unraid-Template rendern
+      - name: Unraid-Templates rendern
         env:
           IMAGE: ${{ steps.name.outputs.image }}
         run: |
           mkdir -p dist
-          sed "s|__IMAGE__|${IMAGE}:latest|g" unraid/kaufland-bons.xml > dist/kaufland-bons.xml
-          grep -q "<Repository>${IMAGE}:latest</Repository>" dist/kaufland-bons.xml
+          for name in kaufland-bons kaufland-bons-login; do
+            sed "s|__IMAGE__|${IMAGE}:latest|g" "unraid/$name.xml" > "dist/$name.xml"
+            grep -q "<Repository>${IMAGE}:latest</Repository>" "dist/$name.xml"
+          done
+          # Login-Template muss den Einmal-Modus starten
+          grep -q "<PostArgs>login-web</PostArgs>" dist/kaufland-bons-login.xml
 
       - uses: actions/upload-artifact@v4
         with:
-          name: unraid-template
-          path: dist/kaufland-bons.xml
+          name: unraid-templates
+          path: dist/*.xml
 
       - name: Release mit Template-Asset
         if: startsWith(github.ref, 'refs/tags/v')
@@ -79,4 +83,4 @@ jobs:
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
             || gh release create "${GITHUB_REF_NAME}" \
                  --title "kaufland-bons ${GITHUB_REF_NAME}" --notes "$notes"
-          gh release upload "${GITHUB_REF_NAME}" dist/kaufland-bons.xml --clobber
+          gh release upload "${GITHUB_REF_NAME}" dist/kaufland-bons.xml dist/kaufland-bons-login.xml --clobber
