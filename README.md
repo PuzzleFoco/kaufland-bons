@@ -31,11 +31,13 @@ Unraid: Das fertig gerenderte Template hängt als Asset am Release bzw. als
 Artifact am Build (`kaufland-bons.xml`). Über *Docker → Template hinzufügen*
 einlesen, `PAPERLESS_URL` und `PAPERLESS_TOKEN` eintragen, fertig.
 
-Ohne Template, per Compose: `docker-compose.yml` anpassen, `image:` auf
-`PAPERLESS_*` setzen und `docker compose up -d`.
+Ohne Template, per Compose: `docker-compose.yml` zieht bereits
+`ghcr.io/puzzlefoco/kaufland-bons:latest` — nur `PAPERLESS_URL` und
+`PAPERLESS_TOKEN` setzen, dann `docker compose up -d`.
 
-Privates Paket? Dann in Unraid einmal `docker login ghcr.io` mit einem
-Personal Access Token (`read:packages`) ausführen.
+Das Paket ist öffentlich (anonamer Pull getestet). Falls du es auf privat
+stellst: in Unraid einmal `docker login ghcr.io` mit einem Personal Access
+Token (`read:packages`) ausführen.
 
 ## Voraussetzungen
 
