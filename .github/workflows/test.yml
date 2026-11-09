@@ -28,4 +28,15 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Container-Test gegen Paperless-Nachbau
-        run: ./tests/container_test.sh kaufland-bons:ci
+        shell: bash
+        run: |
+          set +e
+          ./tests/container_test.sh kaufland-bons:ci 2>&1 | tee /tmp/container-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Annotation ist auch ohne Login sichtbar, Logs nicht.
+            text="$(tail -c 1500 /tmp/container-test.log | tr -d '\r' \
+              | python3 -c 'import sys; print(sys.stdin.read().replace("%", "%25").replace("\n", "%0A"))')"
+            echo "::error title=Container-Test fehlgeschlagen::$text"
+            exit "$status"
+          fi

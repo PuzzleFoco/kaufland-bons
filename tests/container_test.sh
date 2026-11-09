@@ -34,7 +34,7 @@ curl -sf "http://127.0.0.1:$PORT/api/tags/?name__iexact=kaufland&page_size=1" >/
   || fail "Mock-Paperless startet nicht"
 
 echo "== Fixtures erzeugen (Chromium im Image) =="
-$ENGINE run --rm -i -v "$WORK":/w --entrypoint python "$IMAGE" - <<'PY' >/dev/null
+if ! $ENGINE run --rm -i --shm-size=512m -v "$WORK":/w --entrypoint python "$IMAGE" - >"$WORK/fixture.log" 2>&1 <<'PY'
 from playwright.sync_api import sync_playwright
 html = """<html><body style="font-family:sans-serif"><h2>Kaufland</h2>
 <p>Karlsruhe, Musterstr. 1</p><p>03.11.2026 17:42</p><hr>
@@ -53,6 +53,12 @@ with sync_playwright() as p:
         page.close()
     browser.close()
 PY
+then
+  echo "Fixture-Erzeugung fehlgeschlagen:" >&2
+  tail -25 "$WORK/fixture.log" >&2
+  fail "Chromium konnte im Container keine PDFs erzeugen"
+fi
+cat "$WORK/fixture.log"
 
 python3 - "$WORK" <<'PY'
 import json, pathlib, sys
@@ -66,7 +72,7 @@ summary.write_text(json.dumps({
 PY
 
 run_export() {
-  $ENGINE run --rm --network host \
+  $ENGINE run --rm --network host --shm-size=512m \
     -e PUID=0 -e PGID=0 -e KAUFLAND_EXPORT=false \
     -e PAPERLESS_URL="http://127.0.0.1:$PORT" -e PAPERLESS_TOKEN=dummy \
     -e PAPERLESS_TAGS=kaufland,bon,kassenbon \
