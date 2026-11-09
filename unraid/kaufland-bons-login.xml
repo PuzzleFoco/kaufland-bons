@@ -29,7 +29,7 @@
           Description="Weboberflaeche fuer das Login-Fenster"
           Type="Port" Display="always" Required="true" Mask="false">6080</Config>
   <Config Name="VNC_PASSWORD" Target="VNC_PASSWORD" Default="" Mode=""
-          Description="Passwort fuer das Login-Fenster; leer = Zufallspasswort in /config/vnc-password.txt"
+          Description="Passwort fuer das Login-Fenster; leer = Zufallspasswort in /config/vnc-password.txt, none = ohne Abfrage (nur LAN)"
           Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="KAUFLAND_COUNTRY" Target="KAUFLAND_COUNTRY" Default="DE" Mode=""
           Description="Laendercode des Kontos" Type="Variable" Display="advanced" Required="false" Mask="false">DE</Config>

@@ -73,7 +73,10 @@ VNC_PASSWORD='<frei waehlen>' docker compose --profile login up login
 ```
 
 Sicherheit: noVNC läuft **unverschlüsselt** (ws) — nur im LAN, kein
-Port-Forwarding ins Internet, Container nach dem Login löschen. Der
+Port-Forwarding ins Internet, Container nach dem Login löschen. Wer auf die
+Passwortabfrage verzichten will (Heimnetz, Login-Fenster lebt nur Minuten):
+`VNC_PASSWORD=none` startet x11vnc mit `-nopw`, dann sieht und bedient jeder im
+LAN das Fenster. Der
 Login-Container und der Dauer-Container teilen `/config`; der Dauer-Container
 liest `auth.json` beim nächsten Lauf.
 
@@ -121,7 +124,7 @@ Wichtige Variablen:
 | `KAUFLAND_EXPORT_ARGS` | – | z. B. `--period this-year` oder `--since 2024-07-01` |
 | `NOTIFY_URL` | – | Webhook bei Fehlern (HA-Webhook oder ntfy) |
 | `PUID` / `PGID` | `99` / `100` | Dateirechte auf dem Array |
-| `VNC_PASSWORD` | – | nur Login-Container (`login-web`), leer = Zufallspasswort in `/config/vnc-password.txt` |
+| `VNC_PASSWORD` | – | nur Login-Container (`login-web`): leer = Zufallspasswort in `/config/vnc-password.txt`, `none` = ohne Abfrage (nur vertrauenswürdiges LAN) |
 | `LOGIN_PORT` | `6080` | nur Login-Container: Port der Weboberfläche |
 
 ## Verzeichnisse

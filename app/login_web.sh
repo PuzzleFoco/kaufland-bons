@@ -13,8 +13,15 @@ PASSWORD_FILE="$CONFIG/vnc-password.txt"
 
 mkdir -p /tmp/.X11-unix "$CONFIG"
 
+# VNC_PASSWORD=  leer      -> Zufallspasswort, Datei in /config (0600)
+# VNC_PASSWORD=  <wert>    -> dieses Passwort
+# VNC_PASSWORD=  none/off  -> gar keine Abfrage (nur in vertrauenswuerdigem LAN)
 password="${VNC_PASSWORD:-}"
-if [ -z "$password" ]; then
+no_auth=0
+case "$(printf '%s' "$password" | tr '[:upper:]' '[:lower:]')" in
+  none|off|0|false|no) no_auth=1; password="" ;;
+esac
+if [ "$no_auth" -eq 0 ] && [ -z "$password" ]; then
   password="$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-10)"
   umask 077
   printf '%s\n' "$password" > "$PASSWORD_FILE"
@@ -29,9 +36,14 @@ export DISPLAY="$DISPLAY_NUM"
 openbox >/tmp/openbox.log 2>&1 &
 OPENBOX_PID=$!
 
-x11vnc -storepasswd "$password" /tmp/vnc.pass >/dev/null 2>&1
-x11vnc -display "$DISPLAY_NUM" -localhost -forever -shared \
-       -rfbauth /tmp/vnc.pass -rfbport 5900 -noxdamage >/tmp/x11vnc.log 2>&1 &
+if [ "$no_auth" -eq 1 ]; then
+  x11vnc -display "$DISPLAY_NUM" -localhost -forever -shared \
+         -nopw -rfbport 5900 -noxdamage >/tmp/x11vnc.log 2>&1 &
+else
+  x11vnc -storepasswd "$password" /tmp/vnc.pass >/dev/null 2>&1
+  x11vnc -display "$DISPLAY_NUM" -localhost -forever -shared \
+         -rfbauth /tmp/vnc.pass -rfbport 5900 -noxdamage >/tmp/x11vnc.log 2>&1 &
+fi
 VNC_PID=$!
 
 websockify --web /usr/share/novnc "$PORT" localhost:5900 >/tmp/websockify.log 2>&1 &
@@ -45,7 +57,9 @@ trap cleanup EXIT INT TERM
 sleep 1
 echo "=============================================================="
 echo " Login-Fenster:  http://<IP-des-NAS>:$PORT/vnc.html?autoconnect=1&resize=scale"
-if [ -n "${VNC_PASSWORD:-}" ]; then
+if [ "$no_auth" -eq 1 ]; then
+  echo " Passwort:       KEINS (VNC_PASSWORD=none) - jeder im LAN kann zusehen"
+elif [ -n "${VNC_PASSWORD:-}" ]; then
   echo " Passwort:       aus VNC_PASSWORD"
 else
   echo " Passwort:       steht in $PASSWORD_FILE (nicht im Log)"
