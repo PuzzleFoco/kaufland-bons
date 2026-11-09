@@ -16,7 +16,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: pinned
         name: Gepinnten Upstream-Commit lesen
@@ -59,7 +59,7 @@ jobs:
 
       - name: PR anlegen oder aktualisieren
         if: steps.pinned.outputs.ref != steps.upstream.outputs.head
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/upstream-kaufland-api
           delete-branch: true
