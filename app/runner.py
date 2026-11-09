@@ -17,6 +17,7 @@ import os
 import re
 import signal
 import subprocess
+import shutil
 import sys
 import time
 import urllib.error
@@ -35,6 +36,13 @@ STATUS_FILE = CONFIG_DIR / "status.json"
 
 PAPERLESS_URL = os.getenv("PAPERLESS_URL", "").rstrip("/")
 PAPERLESS_TOKEN = os.getenv("PAPERLESS_TOKEN", "")
+# api = REST-Upload mit Metadaten, consume = PDFs in den Consume-Ordner legen,
+# off = nur exportieren. Default: api, wenn URL+Token gesetzt sind, sonst off.
+PAPERLESS_MODE = os.getenv(
+    "PAPERLESS_MODE",
+    "api" if (os.getenv("PAPERLESS_URL") and os.getenv("PAPERLESS_TOKEN")) else "off",
+).strip().lower()
+CONSUME_DIR = Path(os.getenv("CONSUME_DIR", "/consume"))
 CORRESPONDENT = os.getenv("PAPERLESS_CORRESPONDENT", "Kaufland")
 DOCUMENT_TYPE = os.getenv("PAPERLESS_DOCUMENT_TYPE", "Kassenbon")
 TAGS = [t.strip() for t in os.getenv("PAPERLESS_TAGS", "kaufland,bon").split(",") if t.strip()]
@@ -283,6 +291,50 @@ def push(ledger: dict) -> tuple[int, list[str]]:
     return pushed, errors
 
 
+def consume_filename(pdf: Path) -> str:
+    """Readable name for the consume folder (Paperless uses it as the title)."""
+    title, _ = describe(pdf)
+    name = title.replace(" €", "EUR").replace("€", "EUR").replace(",", "-")
+    return f"{re.sub(r'\s+', ' ', name).strip()}.pdf"
+
+
+def copy_to_consume(ledger: dict) -> tuple[int, list[str]]:
+    """Hand receipts to Paperless' consume folder instead of the REST API."""
+    if not CONSUME_DIR.exists():
+        raise RuntimeError(f"Consume-Ordner {CONSUME_DIR} ist nicht gemountet")
+    staging = CONSUME_DIR / ".incoming"
+    staging.mkdir(exist_ok=True)
+    copied, errors = 0, []
+    for pdf, origin in candidate_pdfs():
+        key = f"{origin}:" + str(
+            pdf.relative_to(RECEIPTS_DIR if origin == "archive" else IMPORT_DIR))
+        checksum = digest(pdf)
+        if ledger.get(key, {}).get("sha256") == checksum:
+            continue
+        target = CONSUME_DIR / consume_filename(pdf)
+        if target.exists():
+            target = target.with_name(f"{target.stem}-{checksum[:6]}.pdf")
+        temporary = staging / target.name
+        try:
+            shutil.copyfile(pdf, temporary)
+            temporary.replace(target)
+        except OSError as exc:
+            temporary.unlink(missing_ok=True)
+            errors.append(f"{pdf.name}: {exc}")
+            log(f"FEHLER beim Kopieren von {pdf.name}: {exc}")
+            continue
+        ledger[key] = {"sha256": checksum, "target": str(target),
+                       "pushed_at": datetime.now().isoformat(timespec="seconds")}
+        save_ledger(ledger)
+        copied += 1
+        log(f"-> Consume: {target.name}")
+        if origin == "import":
+            done = IMPORT_DIR / "done"
+            done.mkdir(exist_ok=True)
+            pdf.replace(done / pdf.name)
+    return copied, errors
+
+
 # --------------------------------------------------------------------------- #
 # Notifications / status
 # --------------------------------------------------------------------------- #
@@ -326,14 +378,24 @@ def run_once() -> int:
         if not exported:
             log(f"Export fehlgeschlagen: {export_error}")
     pushed, errors = (0, [])
-    if DO_PUSH and PAPERLESS_URL and PAPERLESS_TOKEN:
+    mode = PAPERLESS_MODE if DO_PUSH else "off"
+    if mode == "consume":
         try:
-            pushed, errors = push(load_ledger())
+            pushed, errors = copy_to_consume(load_ledger())
         except Exception as exc:
             errors.append(str(exc))
-            log(f"Paperless-Upload abgebrochen: {exc}")
-    elif DO_PUSH:
-        log("Paperless nicht konfiguriert (PAPERLESS_URL/PAPERLESS_TOKEN) – nur Export")
+            log(f"Consume-Modus abgebrochen: {exc}")
+    elif mode == "api":
+        if PAPERLESS_URL and PAPERLESS_TOKEN:
+            try:
+                pushed, errors = push(load_ledger())
+            except Exception as exc:
+                errors.append(str(exc))
+                log(f"Paperless-Upload abgebrochen: {exc}")
+        else:
+            log("PAPERLESS_MODE=api, aber PAPERLESS_URL/PAPERLESS_TOKEN fehlen – nur Export")
+    else:
+        log("Paperless nicht aktiv (PAPERLESS_MODE=off) – nur Export")
     write_status(exported, exported, pushed, errors)
     problems = []
     if not exported:

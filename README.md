@@ -46,7 +46,8 @@ Token (`read:packages`) ausführen.
 ## Voraussetzungen
 
 - Kaufland Card (digitaler Kassenbon in der App aktiviert), Konto mit E-Mail/Passwort.
-- Paperless-ngx mit API-Token (Einstellungen → „API-Token").
+- Paperless-ngx — entweder API-Token (Einstellungen → „API-Token") oder der
+  Consume-Ordner als gemounteter Pfad (`PAPERLESS_MODE=consume`).
 - Unraid/Docker, x86_64.
 
 ## 1. Einmalig anmelden (auth.json)
@@ -112,8 +113,10 @@ Wichtige Variablen:
 
 | Variable | Default | Bedeutung |
 |---|---|---|
-| `PAPERLESS_URL` | – | z. B. `http://192.168.1.10:8000` |
-| `PAPERLESS_TOKEN` | – | API-Token aus Paperless |
+| `PAPERLESS_MODE` | `api` wenn URL+Token gesetzt, sonst `off` | `api` = REST mit Metadaten, `consume` = PDFs in einen Ordner, `off` = nur exportieren |
+| `PAPERLESS_URL` | – | nur `api`: z. B. `http://192.168.1.10:8000` |
+| `PAPERLESS_TOKEN` | – | nur `api`: API-Token aus Paperless |
+| `CONSUME_DIR` | `/consume` | nur `consume`: Zielordner (Paperless-Consume) |
 | `PAPERLESS_CORRESPONDENT` | `Kaufland` | wird bei Bedarf angelegt |
 | `PAPERLESS_DOCUMENT_TYPE` | `Kassenbon` | leer = kein Dokumenttyp |
 | `PAPERLESS_TAGS` | `kaufland,bon` | kommasepariert |
@@ -140,10 +143,29 @@ Bild-PDFs) oder für PDFs, die du von Hand gespeichert hast.
 
 ## Ohne Paperless-API (Consume-Ordner)
 
-`PAPERLESS_PUSH=false` setzen und `/receipts` bzw. `/import` auf den
-Consume-Ordner zeigen lassen – dann greift Paperless’ eigener Watcher. Nachteil:
-Korrespondent/Tags/Datum müssen dort über Regeln gesetzt werden, und
-„schon übertragen" erkennt Paperless nur am Datei-Checksum.
+`PAPERLESS_MODE=consume` — dann braucht der Container **weder URL noch Token**,
+nur einen Pfad: das Verzeichnis, das dein Paperless als Consume-Ordner nutzt.
+
+```yaml
+environment:
+  PAPERLESS_MODE: consume
+volumes:
+  - /mnt/user/paperless/consume:/consume
+```
+
+Die PDFs werden mit lesbarem Namen kopiert (`Kaufland 2026-11-03 42-17EUR.pdf`),
+das Archiv in `/receipts` bleibt unangetastet. Kopiert wird über einen
+Staging-Ordner (`.incoming`), damit Paperless keine halben Dateien einsammelt;
+das ledger verhindert, dass derselbe Beleg erneut landet.
+
+**Nicht** `/receipts` auf den Consume-Ordner zeigen lassen: Paperless verschiebt
+eingelesene Dateien aus dem Ordner, dein Archiv wäre nach dem ersten Lauf leer.
+Genau deshalb kopiert der `consume`-Modus, statt zu verschieben.
+
+Was du dabei verlierst: Titel, Datum, Tags und Korrespondent kommen nicht mehr
+aus dem Container. Paperless nutzt den Dateinamen als Titel (daher die lesbaren
+Namen) und muss Korrespondent `Kaufland`, Tags und Dokumenttyp über eigene
+Regeln zuordnen; das Datum zieht es meist aus dem PDF-Text.
 
 ## Betrieb
 

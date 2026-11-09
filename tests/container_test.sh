@@ -143,4 +143,25 @@ assert status["ok"] is False and status["export_ok"] is False, status
 print("Fehlerpfad, Statusdatei, Webhook: ok")
 PY
 
+echo "== Consume-Modus (ohne Paperless-API) =="
+mkdir -p "$WORK/consume" "$WORK/config-consume"
+$ENGINE run --rm --network host --shm-size=512m \
+  -e PUID=0 -e PGID=0 -e KAUFLAND_EXPORT=false -e PAPERLESS_MODE=consume \
+  -e CONSUME_DIR=/consume \
+  -v "$WORK/config-consume":/config -v "$WORK/receipts":/receipts \
+  -v "$WORK/import":/import -v "$WORK/consume":/consume \
+  "$IMAGE" once | tee "$WORK/consume.log"
+grep -q -- "-> Consume:" "$WORK/consume.log" || fail "Consume-Modus hat nichts kopiert"
+python3 - "$WORK" <<'PY' || exit 1
+import json, pathlib, sys
+work = pathlib.Path(sys.argv[1])
+files = sorted(p.name for p in (work / "consume").glob("*.pdf"))
+assert len(files) == 2, f"erwartet 2 PDFs im Consume-Ordner, waren {len(files)}: {files}"
+assert "Kaufland 2026-11-03 42-17EUR.pdf" in files, f"Dateiname unerwartet: {files}"
+assert not list((work / "consume/.incoming").glob("*")), "Staging-Ordner nicht leer"
+ledger = json.loads((work / "config-consume/pushed.json").read_text())
+assert len(ledger) == 2, f"Ledger: {len(ledger)}"
+print("Consume-Ordner, Dateinamen, Ledger: ok")
+PY
+
 echo "ALLE TESTS GRUEN"

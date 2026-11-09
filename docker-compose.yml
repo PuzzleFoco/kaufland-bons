@@ -12,6 +12,7 @@ services:
       RUN_ON_START: "true"
       KAUFLAND_EXPORT: "true"
       KAUFLAND_EXPORT_ARGS: ""          # leer = Voll-Export beim ersten Lauf, danach inkrementell
+      PAPERLESS_MODE: "api"              # api | consume | off
       PAPERLESS_URL: "http://192.168.1.10:8000"
       PAPERLESS_TOKEN: "${PAPERLESS_TOKEN}"
       PAPERLESS_CORRESPONDENT: "Kaufland"
@@ -23,6 +24,7 @@ services:
       - ./appdata:/config               # auth.json, pushed.json, status.json
       - /mnt/user/documents/kaufland:/receipts
       - /mnt/user/documents/kaufland-import:/import
+      # consume-Modus: - /mnt/user/paperless/consume:/consume
     healthcheck:
       test: ["CMD", "python", "/app/runner.py", "health"]
       interval: 6h

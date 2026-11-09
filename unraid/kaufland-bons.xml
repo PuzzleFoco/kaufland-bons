@@ -28,6 +28,9 @@
   <Config Name="receipts" Target="/receipts" Default="/mnt/user/documents/kaufland-bons" Mode="rw"
           Description="Archiv der exportierten Belege (JSON, HTML, JPG, PDF)"
           Type="Path" Display="always" Required="true" Mask="false">/mnt/user/documents/kaufland-bons</Config>
+  <Config Name="consume" Target="/consume" Default="/mnt/user/documents/paperless-consume" Mode="rw"
+          Description="Nur fuer PAPERLESS_MODE=consume: Consume-Ordner deiner Paperless-Instanz (wird kopiert, nicht verschoben)"
+          Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/documents/paperless-consume</Config>
   <Config Name="import" Target="/import" Default="/mnt/user/documents/kaufland-bons-import" Mode="rw"
           Description="Optional: alte PDFs hier ablegen, werden nach Paperless geschoben und nach ./done verschoben"
           Type="Path" Display="advanced" Required="false" Mask="false">/mnt/user/documents/kaufland-bons-import</Config>
@@ -40,8 +43,9 @@
   <Config Name="KAUFLAND_EXPORT" Target="KAUFLAND_EXPORT" Default="true" Mode="" Description="false = nur vorhandene Dateien nach Paperless schieben" Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
   <Config Name="KAUFLAND_EXPORT_ARGS" Target="KAUFLAND_EXPORT_ARGS" Default="" Mode="" Description="Optionale Argumente, z.B. --period this-year oder --since 2024-07-01" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
 
-  <Config Name="PAPERLESS_URL" Target="PAPERLESS_URL" Default="" Mode="" Description="z.B. http://192.168.1.10:8000" Type="Variable" Display="always" Required="true" Mask="false"></Config>
-  <Config Name="PAPERLESS_TOKEN" Target="PAPERLESS_TOKEN" Default="" Mode="" Description="Paperless API-Token (Einstellungen -> API-Token)" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  <Config Name="PAPERLESS_MODE" Target="PAPERLESS_MODE" Default="api" Mode="" Description="api = REST mit Metadaten, consume = PDFs in den Consume-Ordner, off = nur exportieren" Type="Variable" Display="always" Required="false" Mask="false">api</Config>
+  <Config Name="PAPERLESS_URL" Target="PAPERLESS_URL" Default="" Mode="" Description="Nur PAPERLESS_MODE=api, z.B. http://192.168.1.10:8000" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="PAPERLESS_TOKEN" Target="PAPERLESS_TOKEN" Default="" Mode="" Description="Nur PAPERLESS_MODE=api: API-Token (Einstellungen -> API-Token)" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="PAPERLESS_CORRESPONDENT" Target="PAPERLESS_CORRESPONDENT" Default="Kaufland" Mode="" Description="Korrespondent (wird bei Bedarf angelegt)" Type="Variable" Display="advanced" Required="false" Mask="false">Kaufland</Config>
   <Config Name="PAPERLESS_DOCUMENT_TYPE" Target="PAPERLESS_DOCUMENT_TYPE" Default="Kassenbon" Mode="" Description="Dokumenttyp (wird bei Bedarf angelegt; leer = keiner)" Type="Variable" Display="advanced" Required="false" Mask="false">Kassenbon</Config>
   <Config Name="PAPERLESS_TAGS" Target="PAPERLESS_TAGS" Default="kaufland,bon" Mode="" Description="Komma-getrennte Tags" Type="Variable" Display="advanced" Required="false" Mask="false">kaufland,bon</Config>
