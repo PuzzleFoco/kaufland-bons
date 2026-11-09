@@ -192,6 +192,24 @@ Archiv einmalig:
 docker exec kaufland-bons python /app/runner.py prune
 ```
 
+## Konfiguration, die Template-Updates überlebt
+
+Unraid speichert Env-Werte **in der Template-XML** auf dem Flash. Wird das
+Template ersetzt (neues Release), sind sie weg. Deshalb liest der Container
+zusätzlich `/config/kaufland.env`:
+
+```ini
+# /mnt/user/appdata/kaufland-bons/kaufland.env
+PAPERLESS_MODE=api
+PAPERLESS_URL=http://192.168.1.10:8000
+PAPERLESS_TOKEN=dein-token
+EXPORT_FORMATS=pdf,json
+```
+
+Vorrang: ein gesetzter Env-Wert schlägt die Datei. Ist im Template nichts
+eingetragen (oder wurde es zurückgesetzt), greifen die Werte aus der Datei.
+Nebeneffekt: der Token liegt damit in `appdata` statt im Flash-Template.
+
 ## Betrieb
 
 ```sh

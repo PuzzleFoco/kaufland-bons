@@ -27,6 +27,31 @@ import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+# Konfiguration aus /config/kaufland.env (KEY=VALUE) ergaenzen, bevor die
+# Konstanten gelesen werden. So ueberleben Einstellungen ein Template-Update
+# (Unraid speichert Env-Werte in der Template-XML auf dem Flash) und der
+# Paperless-Token liegt nicht im Flash-Template.
+CONFIG_ENV_FILE = Path(os.getenv("CONFIG_ENV_FILE", "/config/kaufland.env"))
+
+
+def _load_config_file() -> None:
+    try:
+        lines = CONFIG_ENV_FILE.read_text("utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+_load_config_file()
+
 CONFIG_DIR = Path(os.getenv("CONFIG_DIR", "/config"))
 RECEIPTS_DIR = Path(os.getenv("RECEIPTS_DIR", "/receipts"))
 IMPORT_DIR = Path(os.getenv("IMPORT_DIR", "/import"))

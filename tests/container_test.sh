@@ -190,4 +190,17 @@ set -e
 printf '%s' "$collide_out" | grep -q "dasselbe Verzeichnis" || fail "Meldung fehlt: $collide_out"
 echo "Kollisionsschutz: ok"
 
+echo "== Konfigurationsdatei (ueberlebt Template-Reset) =="
+mkdir -p "$WORK/envcfg" "$WORK/envfile/2026-11/2026-11-03"
+printf 'EXPORT_FORMATS=pdf,jpg\nPAPERLESS_MODE=off\n' > "$WORK/envcfg/kaufland.env"
+for ext in pdf json jpg html; do printf 'x' > "$WORK/envfile/2026-11/2026-11-03/bon.$ext"; done
+$ENGINE run --rm --entrypoint python -e PUID=0 -e PGID=0 \
+  -v "$WORK/envcfg":/config -v "$WORK/envfile":/receipts "$IMAGE" /app/runner.py prune
+python3 - "$WORK" <<'PY' || exit 1
+import pathlib, sys
+files = sorted(p.name for p in (pathlib.Path(sys.argv[1]) / "envfile/2026-11/2026-11-03").iterdir())
+assert files == ["bon.jpg", "bon.json", "bon.pdf"], f"unerwartet: {files}"
+print("Werte aus /config/kaufland.env greifen: ok")
+PY
+
 echo "ALLE TESTS GRUEN"
